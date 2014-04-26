@@ -36,6 +36,31 @@ namespace Rosenbrock
             //Function(a);
 
             int populationSize = 100;
+            int generationSize = 1000;
+
+            var argsCount = args.Count();
+            if (argsCount > 0)
+            {
+                if (args[0] == "-help")
+                {
+                    Console.WriteLine("#### Optimization of Rosenbrock function. Enjoy! ####");
+                    Console.WriteLine("Please use space between your parameters.");
+                    Console.WriteLine("1. Size of population.");
+                    Console.WriteLine("2. Size of generation");
+                    Console.WriteLine("3. ");
+                }
+                else if (argsCount != 4)
+                {
+                    Console.WriteLine("Wrong q-ty of given parameters. Type -help to see help msg.");
+                    return;
+                }
+                else
+                {
+                    populationSize = Convert.ToInt32(args[0]);
+                    generationSize = Convert.ToInt32(args[1]);
+                }
+
+            }
 
             EvolutionStrategy strategy = new EvolutionStrategy();
             Genotype genotype = new Genotype(populationSize, strategy);
