@@ -62,10 +62,8 @@ namespace Rosenbrock
 
             }
 
-            EvolutionStrategy strategy = new EvolutionStrategy();
-            Genotype genotype = new Genotype(populationSize, strategy);
-
-            genotype.ShowGenes();
+            EvolutionStrategy strategy = new EvolutionStrategy(populationSize, generationSize);
+            strategy.Run();
 
             var function = new FunctionToOptimize(Function);
 

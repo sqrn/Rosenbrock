@@ -22,16 +22,16 @@ namespace Rosenbrock
 
         private List<double> GenerateGenes()
         {
-            List<double> doubleList = new List<double>();
+            List<double> population = new List<double>();
 
             for(int i = 0; i < Length; i++)
             {
                 //var tmpDoubleArray = new double[4];
                 //evolutionStrategy.random.NextDouble();
                 //doubleList.AddRange(tmpDoubleArray);
-                doubleList.Add(evolutionStrategy.random.NextDouble());
+                population.Add(evolutionStrategy.random.NextDouble());
             }
-            return doubleList;
+            return population;
         }
 
         public void ShowGenes()
