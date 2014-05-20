@@ -64,11 +64,14 @@ namespace Rosenbrock
             var doubleNumbers = new double[Length];
             var bytearray = new byte[4 * Length];
             Genes.CopyTo(bytearray, 0);
+            var power = Math.Pow(Length, 32);
             for (int i = 0; i < Length; i++)
             {
                 var singleByteValue = bytearray.Skip(i * Length).Take(4).ToArray(); //konwersja na bajty
                 var rawValue = BitConverter.ToUInt32(singleByteValue, 0); //konwersja na Uint
-                doubleNumbers[i] = (0 + (rawValue * Length) / Math.Pow(Length, 32));//tablica[Length] liczb rzeczywistych, default: Length=2
+                //Console.WriteLine("Liczba: " + rawValue);
+                doubleNumbers[i] = (rawValue * 10.0) / power; //tablica[Length] liczb rzeczywistych, default: Length=2
+                //Console.WriteLine("Wrzucam -> " + doubleNumbers[i] );
             }
             return doubleNumbers;
         }
@@ -81,6 +84,18 @@ namespace Rosenbrock
                 tmpList.Add(this);
             }
             return tmpList;
+        }
+
+        public Genotype Copy()
+        {
+            var copyGenotype = new Genotype(this.Length, this.EvolutionStrategy);
+            copyGenotype.Genes = this.Genes;
+            return copyGenotype;
+        }
+
+        public double RankIndividual()
+        {
+            return this.GetValues().Sum();
         }
 
     }

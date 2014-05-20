@@ -21,12 +21,13 @@ namespace Rosenbrock
         public List<Genotype> ThisGeneration;
         public List<Genotype> NextGeneration;
 
-        public EvolutionStrategy(int populationSize, int sigmaPopulationSize, int numberOfGenerations, int genotypeSize, FunctionToOptimize function)
+        public EvolutionStrategy(int mu, int sigma, int numberOfGenerations, int genotypeSize, FunctionToOptimize function)
         {
-            if (PopulationSize % 2 != 0) throw new ArgumentException("Population size must be even!");
+            if (mu % 2 != 0) throw new ArgumentException("Population size must be even!");
+            if (sigma % 2 != 0) throw new ArgumentException("Population size must be even!");
 
-            PopulationSize = populationSize;
-            SigmaPopulationSize = sigmaPopulationSize;
+            PopulationSize = mu;
+            SigmaPopulationSize = sigma;
             NumberOfGenerations = numberOfGenerations; 
             GenotypeSize = genotypeSize;
 
@@ -40,6 +41,8 @@ namespace Rosenbrock
             BestGenotype = null;
 
             CreateFirstGeneration(); //utworzenie pierwszej generacji osobnikow
+            ShowPopulation();
+            Console.WriteLine("Pierwsza generacja. Tworze liste " + ThisGeneration.Count() + " osobników");
             //RankPopulation(ref ThisGeneration);
             for (int i = 0; i < NumberOfGenerations; i++)
             {
@@ -71,55 +74,90 @@ namespace Rosenbrock
         /// <returns></returns>
         private List<Genotype> DeterministicSelection(ref List<Genotype> generation)
         {
-            //Console.WriteLine("Rozpoczynam proces deterministycznej selekcji osobnikow...");
             var tmpNextGeneration = new List<Genotype>(SigmaPopulationSize);//potomkowie
-            var tmpAdaptationList = new List<double>();
-            var adaptationOfIndividualList = new List<int>();
-            double hi; //srednie przystosowanie osobnika
-            double hs; //srednie przystosowanie calej populacji
+            var individualMantissaList = new List<double>();//tablica czesci ulamkowej
             double ki; //oczekiwana liczba kopii osobnika
+            double hs = RankPopulation(); //srednie przystosowanie calej populacji
 
-            foreach (Genotype individual in generation)
+            int howCopy = 0;
+            for(int i = 0; i < PopulationSize; i++)
+            {
+                ki = generation[i].RankIndividual() / hs; //oblicz przystosowanie osobnika
+                // od razu dopisz do nowej generacji
+                howCopy = (int)Math.Round(ki,0); //ile razy (wartosc calkowita z ki)
+                //Console.WriteLine("Bede kopiowac dokladnie: " + howCopy);
+                for(int j = 0; j < howCopy; j++)
+                {
+                    //moze sie zdazyc sytuacja gdy tmpNextGeneration bedzie przepelniony
+                    try 
+                    {
+                        tmpNextGeneration.Add(generation[i]);
+                    } catch (ArgumentOutOfRangeException) 
+                    {
+                        return tmpNextGeneration; //poniewaz wtedy bedzie cala tablica pelna
+                    }
+                }
+            } // koniec uzupelniania po przystosowaniu osobnikow
+            // jezeli lista nowej populacji tymczasowej nie jest pelna (do rozmiaru sigma)
+            // wtedy dopelnij liste osobnikami z najwieksza czescia ulamkowa
+            double maxkiu = 0.0;
+            int k = 0;
+            int index = 0;
+            var indexesChecked = new List<int>();
+            for (int i = 0; i < PopulationSize; i++)
+            {
+                //sprawdz czy tablica osobnikow tymczasowych jest juz zapelniona
+                if (tmpNextGeneration.Count() == SigmaPopulationSize)
+                    return tmpNextGeneration;
+                
+                //wez czesc ulamkowa pierwszego osobnika
+                //i przeszukaj cala populacje i znajdz osobnika z najwieksza czescia ulamkowa
+                maxkiu =  Frac(generation[i].RankIndividual() / hs);
+                for( ; k < PopulationSize; k++) 
+                {
+                    if(indexesChecked.Contains(k))
+                        continue;
+                    if(maxkiu < Frac(generation[k].RankIndividual() / hs)) 
+                    {
+                        maxkiu = Frac(generation[k].RankIndividual() / hs);
+                        index = generation.IndexOf(generation[k]);
+                    }
+                }
+                //dodaj najlepszego osobnika do tablicy
+                tmpNextGeneration.Add(generation[index]);
+                //oznacz osobnik jako odwiedzony aby zapobiec kopiowaniu tego samego osobnika wielokrotnie
+                indexesChecked.Add(index);
+                index = 0;//wyzeruj index
+
+            }
+
+            Console.WriteLine(
+                "Proces deterministycznej selekcji osobników potomnych zakończony przed zapelnieniem calej listy."
+                );
+            return tmpNextGeneration;
+        }
+
+        public double RankPopulation() 
+        {
+            double hs; //przystosowanie populacji
+            double hi; //srednie przystosowanie osobnika
+            var tmpAdaptationList = new List<double>();
+            foreach (Genotype individual in ThisGeneration)
             {
                 hi = individual.GetValues().Sum();
                 tmpAdaptationList.Add(hi);
             }
             hs = tmpAdaptationList.Sum() / PopulationSize;
-            Console.WriteLine("HS: " + hs);
-
-            for(int i = 0; i < PopulationSize; i++)
-            {
-                ki = tmpAdaptationList[i] / hs;
-                adaptationOfIndividualList.Add(Convert.ToInt32(ki));
-            }
-            //wiedzac ile bedzie kopii kolejnych osobnikow, nalezy wygenerowac ich liste
-            int j = 0;
-            foreach (Genotype individual in generation)
-            {
-                try
-                {
-                    tmpNextGeneration.AddRange(individual.CopyOf(adaptationOfIndividualList[j]));
-                }
-                catch (IndexOutOfRangeException)
-                {
-                    Console.Write("Przekroczono " + SigmaPopulationSize + " osobnikow w nowej populacji.");
-                    Console.WriteLine(" Zwracam populację i wychodzę z pętli.");
-                    return tmpNextGeneration;
-                }
-                j++;
-            }
-            //Pozostałe wolne miejsce w nowej populacji zostaną zapełnione osobnikami o największych 
-            //częściach ułamkowych oczekiwanych liczb kopii.
-
-            //Console.WriteLine("Proces deterministycznej selekcji osobników potomnych zakończony z sukcesem.");
-            return tmpNextGeneration;
+            Console.WriteLine("Ocena populacji: " + hs);
+            return hs;
         }
+
         /// <summary>
         /// Oblicza część ułamkową liczby value
         /// </summary>
         /// <param name="value">Liczba zmiennopozycyjna</param>
         /// <returns>Część ułamkowa</returns>
-        private decimal Frac(decimal value) { return value - Math.Truncate(value); }
+        public static double Frac(double value) { return value - Math.Truncate(value); }
 
         public void CreateFirstGeneration()
         {

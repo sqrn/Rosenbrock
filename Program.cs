@@ -37,8 +37,8 @@ namespace Rosenbrock
             //Function(a);
 
             int populationSize = 50; //liczba osobnikow w populacji P, parametr μ, mu
-            int sigmaPopulationSize = 300; // liczba osobnikow w populacji O, parametr sigma
-            int generationSize = 1000; //liczba mozliwych generacji populacji
+            int sigmaPopulationSize = 80; // liczba osobnikow w populacji O, parametr sigma
+            int generationSize = 100; //liczba mozliwych generacji populacji
             int genotypeSize = 2; //rozmiar genotypu, ilość wymiarów funkcji
 
             var argsCount = args.Count();
@@ -75,11 +75,17 @@ namespace Rosenbrock
             var bestGenotypes = new List<Genotype>();
             var bestGenotypesGeneration = new List<int>();
 
+            Console.WriteLine("Otrzymalem dane: ");
+            Console.WriteLine("Rozmiar pierwszej populacji (mu): " + populationSize);
+            Console.WriteLine("Rozmiar populacji potomków (sigma): " + sigmaPopulationSize);
+            Console.WriteLine("Liczba generacji (epok): " + generationSize);
+            Console.WriteLine("Rozmiar genotypu (argumentów funkcji): " + generationSize);
+
             //wykonanie algorytmu dokladnie 10 razy
             for (int i = 1; i <= 10; i++)
             {
                 var algorithm = new EvolutionStrategy(populationSize, sigmaPopulationSize, generationSize, genotypeSize, function);
-                Console.WriteLine("Rozpoczynam proces tworzenia " + i + " cywilizacji osobników.");
+                Console.WriteLine("Rozpoczynam proces tworzenia " + i + " epoki osobników.");
                 algorithm.Run();
                 //GaussianGenerator gaussian = new GaussianGenerator();
 
