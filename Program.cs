@@ -37,7 +37,7 @@ namespace Rosenbrock
             //Function(a);
 
             int populationSize = 50; //liczba osobnikow w populacji P, parametr μ, mu
-            int sigmaPopulationSize = 80; // liczba osobnikow w populacji O, parametr sigma
+            int lambda = 80; // liczba osobnikow w populacji O, parametr sigma
             int generationSize = 100; //liczba mozliwych generacji populacji
             int genotypeSize = 2; //rozmiar genotypu, ilość wymiarów funkcji
 
@@ -49,7 +49,7 @@ namespace Rosenbrock
                     Console.WriteLine("#### Optimization of Rosenbrock function. Enjoy! ####");
                     Console.WriteLine("Please use space between your parameters.");
                     Console.WriteLine("1. Size of population (μ parameter)");
-                    Console.WriteLine("2. Size of next population (sigma parameter)");
+                    Console.WriteLine("2. Size of next population (lambda parameter)");
                     Console.WriteLine("3. Size of generation");
                     Console.WriteLine("4. Size of genotype");
                     return;
@@ -62,7 +62,7 @@ namespace Rosenbrock
                 else
                 {
                     populationSize = Convert.ToInt32(args[0]);
-                    sigmaPopulationSize = Convert.ToInt32(args[1]); 
+                    lambda = Convert.ToInt32(args[1]); 
                     generationSize = Convert.ToInt32(args[2]);
                     genotypeSize = Convert.ToInt32(args[3]);
                 }
@@ -77,14 +77,14 @@ namespace Rosenbrock
 
             Console.WriteLine("Otrzymalem dane: ");
             Console.WriteLine("Rozmiar pierwszej populacji (mu): " + populationSize);
-            Console.WriteLine("Rozmiar populacji potomków (sigma): " + sigmaPopulationSize);
+            Console.WriteLine("Rozmiar populacji potomków (sigma): " + lambda);
             Console.WriteLine("Liczba generacji (epok): " + generationSize);
             Console.WriteLine("Rozmiar genotypu (argumentów funkcji): " + generationSize);
 
             //wykonanie algorytmu dokladnie 10 razy
             for (int i = 1; i <= 10; i++)
             {
-                var algorithm = new EvolutionStrategy(populationSize, sigmaPopulationSize, generationSize, genotypeSize, function);
+                var algorithm = new EvolutionStrategy(populationSize, lambda, generationSize, genotypeSize, function);
                 Console.WriteLine("Rozpoczynam proces tworzenia " + i + " epoki osobników.");
                 algorithm.Run();
                 //GaussianGenerator gaussian = new GaussianGenerator();

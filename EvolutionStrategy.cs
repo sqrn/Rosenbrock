@@ -10,26 +10,30 @@ namespace Rosenbrock
     {
         public Random Random;
         public int PopulationSize { get; set; }
-        public int SigmaPopulationSize { get; set; }
+        public int LambdaPopulationSize { get; set; }
         public int NumberOfGenerations { get; set; }
         public int GenotypeSize { get; set; }
 
         public Genotype BestGenotype { get; set; }
         public int BestGenotypeGeneration { get; set; }
 
+        public FunctionToOptimize EvaluateFunction;
+
 
         public List<Genotype> ThisGeneration;
         public List<Genotype> NextGeneration;
+        public List<Genotype> ResultGeneration;
 
-        public EvolutionStrategy(int mu, int sigma, int numberOfGenerations, int genotypeSize, FunctionToOptimize function)
+        public EvolutionStrategy(int mu, int lambda, int numberOfGenerations, int genotypeSize, FunctionToOptimize function)
         {
             if (mu % 2 != 0) throw new ArgumentException("Population size must be even!");
-            if (sigma % 2 != 0) throw new ArgumentException("Population size must be even!");
+            if (lambda % 2 != 0) throw new ArgumentException("Next population size must be even!");
 
             PopulationSize = mu;
-            SigmaPopulationSize = sigma;
+            LambdaPopulationSize = lambda;
             NumberOfGenerations = numberOfGenerations; 
             GenotypeSize = genotypeSize;
+            EvaluateFunction = function;
 
             Random = new Random();
         }
@@ -37,19 +41,70 @@ namespace Rosenbrock
         public void Run()
         {
             ThisGeneration = new List<Genotype>(PopulationSize);//obecna generacja
-            NextGeneration = new List<Genotype>(SigmaPopulationSize);//potomkowie
+            NextGeneration = new List<Genotype>(LambdaPopulationSize);//potomkowie
+            ResultGeneration = new List<Genotype>(LambdaPopulationSize);//populacja wyjsciowa
             BestGenotype = null;
 
             CreateFirstGeneration(); //utworzenie pierwszej generacji osobnikow
-            ShowPopulation();
-            Console.WriteLine("Pierwsza generacja. Tworze liste " + ThisGeneration.Count() + " osobników");
+            RankPopulation();
+            //ShowPopulation();
+            //Console.WriteLine("Pierwsza generacja. Tworze liste " + ThisGeneration.Count() + " osobników");
             //RankPopulation(ref ThisGeneration);
             for (int i = 0; i < NumberOfGenerations; i++)
             {
                 NextGeneration = Reproduction();
-                Console.WriteLine("NextGeneration size: " + NextGeneration.Count());
+                Crossover();
+                Mutate();
+                //Console.WriteLine("NextGeneration size: " + NextGeneration.Count());
+                //O = Krzyzowanie i Mutacja NextGeneration
+                //Ocena O
+                //ThisGeneration = mu najlepszych osobnikow z O (posortuj tablice i wez mu)
             }
 
+        }
+
+        public void Crossover()
+        {         
+            int one = 0;
+            int two = 0;
+            for (int i = 0; i < LambdaPopulationSize; i=+2) 
+            {
+                one = this.Random.Next(LambdaPopulationSize);
+                two = this.Random.Next(LambdaPopulationSize);
+                ResultGeneration.AddRange(
+                    NextGeneration[this.Random.Next(one)].Crossover(NextGeneration[two])
+                    );
+            }
+
+        }
+
+        public void Mutate()
+        {
+
+        }
+
+        private void RankPopulation(ref List<Genotype> generation)
+        {
+            foreach (var individual in generation)
+            {
+                individual.FunctionValue = EvaluateFunction(individual.GetValues());
+            }
+            //sortowanie
+            //generation.Sort(new GenotypeComparer());
+        }
+        public double RankPopulation()
+        {
+            double hs; //przystosowanie populacji
+            double hi; //srednie przystosowanie osobnika
+            var tmpAdaptationList = new List<double>();
+            foreach (Genotype individual in ThisGeneration)
+            {
+                hi = individual.GetValues().Sum();
+                tmpAdaptationList.Add(hi);
+            }
+            hs = tmpAdaptationList.Sum() / PopulationSize;
+            Console.WriteLine("Ocena populacji: " + hs);
+            return hs;
         }
 
         public void ShowPopulation()
@@ -74,7 +129,7 @@ namespace Rosenbrock
         /// <returns></returns>
         private List<Genotype> DeterministicSelection(ref List<Genotype> generation)
         {
-            var tmpNextGeneration = new List<Genotype>(SigmaPopulationSize);//potomkowie
+            var tmpNextGeneration = new List<Genotype>(LambdaPopulationSize);//potomkowie
             var individualMantissaList = new List<double>();//tablica czesci ulamkowej
             double ki; //oczekiwana liczba kopii osobnika
             double hs = RankPopulation(); //srednie przystosowanie calej populacji
@@ -107,7 +162,7 @@ namespace Rosenbrock
             for (int i = 0; i < PopulationSize; i++)
             {
                 //sprawdz czy tablica osobnikow tymczasowych jest juz zapelniona
-                if (tmpNextGeneration.Count() == SigmaPopulationSize)
+                if (tmpNextGeneration.Count() == LambdaPopulationSize)
                     return tmpNextGeneration;
                 
                 //wez czesc ulamkowa pierwszego osobnika
@@ -135,21 +190,6 @@ namespace Rosenbrock
                 "Proces deterministycznej selekcji osobników potomnych zakończony przed zapelnieniem calej listy."
                 );
             return tmpNextGeneration;
-        }
-
-        public double RankPopulation() 
-        {
-            double hs; //przystosowanie populacji
-            double hi; //srednie przystosowanie osobnika
-            var tmpAdaptationList = new List<double>();
-            foreach (Genotype individual in ThisGeneration)
-            {
-                hi = individual.GetValues().Sum();
-                tmpAdaptationList.Add(hi);
-            }
-            hs = tmpAdaptationList.Sum() / PopulationSize;
-            Console.WriteLine("Ocena populacji: " + hs);
-            return hs;
         }
 
         /// <summary>

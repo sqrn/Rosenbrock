@@ -13,6 +13,7 @@ namespace Rosenbrock
         public int Length {get; set;}
         public EvolutionStrategy EvolutionStrategy{get; set;}
         public Double FunctionValue { get; set; }
+        public double[] GenesInDouble { get; set; }
 
         public Genotype(int length, EvolutionStrategy algorithm)
         {
@@ -38,14 +39,34 @@ namespace Rosenbrock
             return new BitArray(byteList.ToArray());
         }
 
-
-        public Genotype[] Crossover(Genotype parent2, float crossoverRate)
+        /// <summary>
+        /// Tutaj modyfikujemy geny rodzicielskich chromosomów
+        /// </summary>
+        /// <param name="parent2"></param>
+        /// <param name="parent2"></param>
+        /// <returns></returns>
+        public Genotype[] Crossover(Genotype parent2)
         {
-            Console.WriteLine("Krzyzowanie");
+            var copyArray = new BitArray(Length * 32);
+            var rnd = EvolutionStrategy.Random.NextDouble();//zmienna losowa z zakresu 0..1
+            
             var child1 = new Genotype(Length, EvolutionStrategy);
             var child2 = new Genotype(Length, EvolutionStrategy);
+            //konwersja wartosci chromosomow do liczby rzeczywistej
+            //dodanie rnd do kazdego genu rodzica
+            //powrotna konwersja na Bity
 
-            return new Genotype[2] {child1, child2};
+            var parent1values = this.GetValues();//tablica postaci rzeczywistej domyslnie [x,y]
+            var parent2values = parent2.GetValues();
+
+            for (int i = 0; i < Length; i++)
+            {
+                child1.GenesInDouble[i] = parent1values[i] + rnd * (parent2values[i] - parent1values[i]);
+                child2.GenesInDouble[i] = parent2values[i] + parent1values[i] - child1.GenesInDouble[i];
+            }
+
+
+            return new Genotype[2] { child1, child2 };
         }
 
         public void Mutate(float mutationRate)
@@ -73,6 +94,7 @@ namespace Rosenbrock
                 doubleNumbers[i] = (rawValue * 10.0) / power; //tablica[Length] liczb rzeczywistych, default: Length=2
                 //Console.WriteLine("Wrzucam -> " + doubleNumbers[i] );
             }
+            GenesInDouble = doubleNumbers;
             return doubleNumbers;
         }
 
