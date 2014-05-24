@@ -64,14 +64,16 @@ namespace Rosenbrock
                 child1.GenesInDouble[i] = parent1values[i] + rnd * (parent2values[i] - parent1values[i]);
                 child2.GenesInDouble[i] = parent2values[i] + parent1values[i] - child1.GenesInDouble[i];
             }
-
-
             return new Genotype[2] { child1, child2 };
         }
 
-        public void Mutate(float mutationRate)
+        public void Mutate()
         {
-            Console.WriteLine("Mutacja");
+            var rnd = EvolutionStrategy.Random.NextDouble();//zmienna losowa z zakresu 0..1
+            for(int i=0; i<Length; i++) 
+            {
+                this.GenesInDouble[i] = this.GenesInDouble[i] + rnd;
+            }
         }
 
         /// <summary>

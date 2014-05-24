@@ -63,6 +63,10 @@ namespace Rosenbrock
 
         }
 
+        /// <summary>
+        /// Metoda krzyzuje dwa losowo wybrane osobniki, ktore staja sie rodzicami.
+        /// I uzupelnia generacje potomkow dokladnie dwoma nowymi osobnikami.
+        /// </summary>
         public void Crossover()
         {         
             int one = 0;
@@ -80,7 +84,10 @@ namespace Rosenbrock
 
         public void Mutate()
         {
-
+            foreach(Genotype specimen in ResultGeneration) 
+            {
+                specimen.Mutate();
+            }
         }
 
         private void RankPopulation(ref List<Genotype> generation)
