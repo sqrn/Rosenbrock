@@ -11,6 +11,8 @@ namespace Rosenbrock
 
     class Program
     {
+        public static System.IO.StreamWriter results = new System.IO.StreamWriter("results.txt");
+
         /// <summary>
         /// Badana funkcja - Rosenbrock
         /// sum(100*(x(i)−x(i−1)^2)^2   + ( 1−x(i−1) )^2 )
@@ -19,27 +21,34 @@ namespace Rosenbrock
         {
             List<double> valueList = new List<double>();
             double value;
+            double f1 = 0.0;
+            int x = 0;
+            int y = 1;
+            int counter = 0;
 
-            for (int i = 1; i < values.Length - 1; i++)
+            while(counter < values.Length) 
             {
-                value = 100 * Math.Pow(values[i] - Math.Pow(values[i - 1], 2), 2) + Math.Pow(1 - values[i - 1], 2);
+                value = Math.Pow((1 - values[x]), 2) + 100 * Math.Pow(values[y] - Math.Pow(values[x], 2), 2);
                 valueList.Add(value);
+                counter++;
             }
-            double f1 = valueList.Sum();
-            //Console.WriteLine("Wynik funkcji to: " + f1);
+
+            for(int i = 1; i < values.Length; i++) 
+            {
+                f1 += valueList[i];
+            }
             return f1;
         }
 
 
         static void Main(string[] args)
         {
-            //double[] a = {1.2, 2.1, 3.5};
-            //Function(a);
-
-            int populationSize = 50; //liczba osobnikow w populacji P, parametr μ, mu
-            int lambda = 80; // liczba osobnikow w populacji O, parametr sigma
+            int mu = 50; //liczba osobnikow w populacji P, parametr μ, mu
+            int lambda = 90; // liczba osobnikow w populacji O, parametr sigma
             int generationSize = 100; //liczba mozliwych generacji populacji
             int genotypeSize = 2; //rozmiar genotypu, ilość wymiarów funkcji
+            float mutationRate = 0.8F; //współczynnik mutacji
+            float crossoverRate = 0.8F; //wspołczynnik krzyżowania
 
             var argsCount = args.Count();
             if (argsCount >= 1)
@@ -51,20 +60,24 @@ namespace Rosenbrock
                     Console.WriteLine("1. Size of population (μ parameter)");
                     Console.WriteLine("2. Size of next population (lambda parameter)");
                     Console.WriteLine("3. Size of generation");
-                    Console.WriteLine("4. Size of genotype");
+                    Console.WriteLine("4. Mutation rate <0,1>");
+                    Console.WriteLine("5. Crossover rate <0,1>");
+                    Console.WriteLine("6. Size of genotype");
                     return;
                 }
-                else if (argsCount != 5)
+                else if (argsCount != 6)
                 {
                     Console.WriteLine("Wrong q-ty of given parameters. Type -help to see help msg.");
                     return;
                 }
                 else
                 {
-                    populationSize = Convert.ToInt32(args[0]);
+                    mu = Convert.ToInt32(args[0]);
                     lambda = Convert.ToInt32(args[1]); 
                     generationSize = Convert.ToInt32(args[2]);
-                    genotypeSize = Convert.ToInt32(args[3]);
+                    mutationRate = Convert.ToInt32(args[3]);
+                    crossoverRate = Convert.ToInt32(args[4]);
+                    genotypeSize = Convert.ToInt32(args[5]);
                 }
 
             }
@@ -72,55 +85,33 @@ namespace Rosenbrock
 
             //zmienne tymczasowe
             var function = new FunctionToOptimize(Function);
-            var bestGenotypes = new List<Genotype>();
-            var bestGenotypesGeneration = new List<int>();
 
             Console.WriteLine("Otrzymalem dane: ");
-            Console.WriteLine("Rozmiar pierwszej populacji (mu): " + populationSize);
-            Console.WriteLine("Rozmiar populacji potomków (sigma): " + lambda);
-            Console.WriteLine("Liczba generacji (epok): " + generationSize);
-            Console.WriteLine("Rozmiar genotypu (argumentów funkcji): " + generationSize);
+            Console.WriteLine("1. Rozmiar pierwszej populacji (mu): " + mu);
+            Console.WriteLine("2. Rozmiar populacji potomków (sigma): " + lambda);
+            Console.WriteLine("3. Liczba generacji: " + generationSize);
+            Console.WriteLine("4. Prawdopodobieństwo mutacji <0,1>: " + mutationRate);
+            Console.WriteLine("5. Prawdopodobieństwo krzyżowania: " + crossoverRate);
+            Console.WriteLine("6. Rozmiar genotypu (argumentów funkcji): " + genotypeSize);
+            var algorithm = new EvolutionStrategy(mu, lambda, generationSize, mutationRate, crossoverRate, genotypeSize, function);
 
             //wykonanie algorytmu dokladnie 10 razy
             for (int i = 1; i <= 10; i++)
             {
-                var algorithm = new EvolutionStrategy(populationSize, lambda, generationSize, genotypeSize, function);
-                Console.WriteLine("Rozpoczynam proces tworzenia " + i + " epoki osobników.");
+                Console.WriteLine();
+                Console.WriteLine("Iteracja numer: " + i);
+                Program.results.WriteLine("Iteracja numer: {0}. Poniżej najlepsze genotypy", i);
                 algorithm.Run();
-                //GaussianGenerator gaussian = new GaussianGenerator();
-
-                ///Console.ReadKey();
-
-                //zapisz najlepszych osobnikow
-                //bestGenotypes.Add(algorithm.BestGenotype);
-                //bestGenotypesGeneration.Add(algorithm.BestGenotypeGeneration);
+                Program.results.WriteLine("Najlepszy: {0}", algorithm.BestGenotype.Min().ToString("0.000000000"));
             }
-            Console.WriteLine("Koniec... Naciśnij ENTER aby zakończyć.");
 
+            Program.results.WriteLine("Najgorszy: {0}", algorithm.BestGenotype.Max().ToString("0.000000000"));
+            Program.results.WriteLine("Średni: {0}", algorithm.BestGenotype.Average().ToString("0.000000000"));
+            Program.results.WriteLine("Najlepszy: {0}", algorithm.BestGenotype.Min().ToString("0.000000000"));
+            //zamkniecie pliku
+            results.WriteLine();
+            results.Close();
 
-            /*
-            //zapis do pliku
-            FileStream fs = new FileStream(DateTime.Now.ToString("HH-mm-ss") + ".csv", FileMode.Create);
-            StreamWriter sw = new StreamWriter(fs);
-            Console.SetOut(sw);
-
-            Console.WriteLine("Generacja najlepszego Genotypu; Wartość najlepszego Genotypu;");
-           
-            for (int i = 0; i < 10; i++)
-			{
-                
-                Console.WriteLine("{0};{1}", bestGenotypesGeneration[i], bestGenotypes[i].FunctionValue.ToString("0.000000000"));
-			}
-
-            Console.WriteLine("Średnia wartość;Nalepsza wartość;Najgorsza wartość");
-            Console.WriteLine("{0};{1};{2}", bestGenotypes.Average(g => g.FunctionValue), bestGenotypes.Min(g => g.FunctionValue), bestGenotypes.Max(g => g.FunctionValue));
-            Console.WriteLine("Średnia ilość epok;Nalepsza ilość epok;Najgorsza ilość epok");
-            Console.WriteLine("{0};{1};{2}", bestGenotypesGeneration.Average(), bestGenotypesGeneration.Min(), bestGenotypesGeneration.Max());
-            sw.Flush();
-            fs.Flush(true);
-            fs.Close();
-            */
-            Console.ReadKey();
         }
     }
 }

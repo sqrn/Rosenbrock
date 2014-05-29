@@ -3,18 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace Rosenbrock
 {
     class EvolutionStrategy
     {
         public Random Random;
-        public int PopulationSize { get; set; }
-        public int LambdaPopulationSize { get; set; }
-        public int NumberOfGenerations { get; set; }
-        public int GenotypeSize { get; set; }
+        private int PopulationSize { get; set; }
+        private int LambdaPopulationSize { get; set; }
+        private int NumberOfGenerations { get; set; }
+        private float MutationRate { get; set; }
+        private float CrossoverRate { get; set; }
+        private int GenotypeSize { get; set; }
 
-        public Genotype BestGenotype { get; set; }
+        public List<double> BestGenotype { get; set; }
         public int BestGenotypeGeneration { get; set; }
 
         public FunctionToOptimize EvaluateFunction;
@@ -24,14 +27,25 @@ namespace Rosenbrock
         public List<Genotype> NextGeneration;
         public List<Genotype> ResultGeneration;
 
-        public EvolutionStrategy(int mu, int lambda, int numberOfGenerations, int genotypeSize, FunctionToOptimize function)
+        public EvolutionStrategy (
+            int mu, 
+            int lambda, 
+            int numberOfGenerations,
+            float mutationRate,
+            float crossoverRate,
+            int genotypeSize, 
+            FunctionToOptimize function )
         {
             if (mu % 2 != 0) throw new ArgumentException("Population size must be even!");
             if (lambda % 2 != 0) throw new ArgumentException("Next population size must be even!");
+            if (mutationRate >= 1.0 || mutationRate <= 0) throw new ArgumentOutOfRangeException("mutationRate must be between 0 and 1");
+            if (crossoverRate >= 1.0 || crossoverRate <= 0) throw new ArgumentOutOfRangeException("crossoverRate must be between 0 and 1");
 
             PopulationSize = mu;
             LambdaPopulationSize = lambda;
-            NumberOfGenerations = numberOfGenerations; 
+            NumberOfGenerations = numberOfGenerations;
+            MutationRate = mutationRate;
+            CrossoverRate = crossoverRate;
             GenotypeSize = genotypeSize;
             EvaluateFunction = function;
 
@@ -43,24 +57,34 @@ namespace Rosenbrock
             ThisGeneration = new List<Genotype>(PopulationSize);//obecna generacja
             NextGeneration = new List<Genotype>(LambdaPopulationSize);//potomkowie
             ResultGeneration = new List<Genotype>(LambdaPopulationSize);//populacja wyjsciowa
-            BestGenotype = null;
 
             CreateFirstGeneration(); //utworzenie pierwszej generacji osobnikow
-            RankPopulation();
-            //ShowPopulation();
-            //Console.WriteLine("Pierwsza generacja. Tworze liste " + ThisGeneration.Count() + " osobników");
-            //RankPopulation(ref ThisGeneration);
-            for (int i = 0; i < NumberOfGenerations; i++)
+            RatePopulation(ref ThisGeneration);
+            BestGenotype = new List<double>(PopulationSize);
+            //ShowPopulation(ThisGeneration);
+            for (int i = 0; i <= NumberOfGenerations; i++)
             {
-                NextGeneration = Reproduction();
+                Console.Write("{0} ", i);
+                Program.results.WriteLine("{0}", ThisGeneration.Last().FunctionValue.ToString("0.000000000"));
+                BestGenotype.Add(ThisGeneration.Last().FunctionValue);
+                NextGeneration = Selection();
                 Crossover();
                 Mutate();
-                //Console.WriteLine("NextGeneration size: " + NextGeneration.Count());
-                //O = Krzyzowanie i Mutacja NextGeneration
-                //Ocena O
-                //ThisGeneration = mu najlepszych osobnikow z O (posortuj tablice i wez mu)
+                //po mutacji i krzyzowaniu otrzymujemy nowa populacje - ResultGeneration
+                RatePopulation(ref ResultGeneration);
+                ThisGeneration = Succesion();
             }
 
+        }
+
+        private void RatePopulation(ref List<Genotype> generation)
+        {
+            foreach (var specimen in generation)
+            {
+                specimen.FunctionValue = EvaluateFunction( specimen.GetValues() );
+            }
+            //sortowanie
+            generation.Sort(new GenotypeComparer() );
         }
 
         /// <summary>
@@ -68,135 +92,108 @@ namespace Rosenbrock
         /// I uzupelnia generacje potomkow dokladnie dwoma nowymi osobnikami.
         /// </summary>
         public void Crossover()
-        {         
-            int one = 0;
-            int two = 0;
-            for (int i = 0; i < LambdaPopulationSize; i=+2) 
+        {
+            var lambda = LambdaPopulationSize;
+            for (int i = 0; i < lambda; i+=2)
             {
-                one = this.Random.Next(LambdaPopulationSize);
-                two = this.Random.Next(LambdaPopulationSize);
-                ResultGeneration.AddRange(
-                    NextGeneration[this.Random.Next(one)].Crossover(NextGeneration[two])
-                    );
+                if(this.Random.NextDouble() < CrossoverRate)
+                    ResultGeneration.AddRange(
+                        Genotype.Crossover(
+                            NextGeneration[Random.Next(lambda)],
+                            NextGeneration[Random.Next(lambda)]
+                            )
+                        );
             }
-
         }
 
         public void Mutate()
         {
             foreach(Genotype specimen in ResultGeneration) 
             {
-                specimen.Mutate();
+                specimen.Mutate(MutationRate);
             }
         }
 
-        private void RankPopulation(ref List<Genotype> generation)
-        {
-            foreach (var individual in generation)
-            {
-                individual.FunctionValue = EvaluateFunction(individual.GetValues());
-            }
-            //sortowanie
-            //generation.Sort(new GenotypeComparer());
-        }
-        public double RankPopulation()
-        {
-            double hs; //przystosowanie populacji
-            double hi; //srednie przystosowanie osobnika
-            var tmpAdaptationList = new List<double>();
-            foreach (Genotype individual in ThisGeneration)
-            {
-                hi = individual.GetValues().Sum();
-                tmpAdaptationList.Add(hi);
-            }
-            hs = tmpAdaptationList.Sum() / PopulationSize;
-            Console.WriteLine("Ocena populacji: " + hs);
-            return hs;
-        }
-
-        public void ShowPopulation()
+        public void ShowPopulation(List<Genotype> generation)
         {
             for (int i = 0; i < PopulationSize; i++)
             {
-                Console.WriteLine(ThisGeneration[i].GetValues()[0] + "; " + ThisGeneration[i].GetValues()[1]);
+                //Console.WriteLine(ThisGeneration[i].GetValues()[0] + "; " + ThisGeneration[i].GetValues()[1]);
+                Console.WriteLine(ThisGeneration[i].FunctionValue.ToString("0.000000000"));
             }
         }
 
-        public List<Genotype> Reproduction()
-        {
-            NextGeneration = DeterministicSelection(ref ThisGeneration);
-            return NextGeneration;
-            //returnGeneration = Crossover(generation);
-        }
         /// <summary>
-        /// Selekcja deterministyczna.
-        /// Na podstawie http://www.bialystok.edu.pl/cen/archiwum/mat_dyd/Informatyk/sztuczna_int.htm
+        /// Ocena populacji na podstawie wartości funkcji
+        /// </summary>
+        /// <returns>średnia ocena całej populacji</returns>
+        public double RankPopulation()
+        {
+            double sum = 0.0; //srednie przystosowanie osobnika
+            foreach (Genotype specimen in ThisGeneration)
+            {
+                sum += specimen.FunctionValue;
+            }
+            return sum / PopulationSize;
+        }
+
+        /// <summary>
+        /// Selekcja deterministyczna. Funkcja ocenia przystosowanie każdego osobnika indywidualnie
+        /// Następnie kopiuje go do populacji tymczasowej dokładnie tyle razy ile wynosi część całkowita oceny przystosowania.
+        /// Ocena przystosowania osobnika / Średnie przystosowanie wszystkich osobników w populacji
         /// </summary>
         /// <param name="generation"></param>
         /// <returns></returns>
-        private List<Genotype> DeterministicSelection(ref List<Genotype> generation)
+        private List<Genotype> Selection() 
         {
-            var tmpNextGeneration = new List<Genotype>(LambdaPopulationSize);//potomkowie
-            var individualMantissaList = new List<double>();//tablica czesci ulamkowej
-            double ki; //oczekiwana liczba kopii osobnika
-            double hs = RankPopulation(); //srednie przystosowanie calej populacji
+            NextGeneration.Clear();
 
-            int howCopy = 0;
-            for(int i = 0; i < PopulationSize; i++)
+            var tmpGenotypes = new List<Genotype>(LambdaPopulationSize);
+            double sum = RankPopulation();//srednie przystosowanie populacji
+            bool isLambdaEmpty = true;
+            int qty;
+            while (isLambdaEmpty)
             {
-                ki = generation[i].RankIndividual() / hs; //oblicz przystosowanie osobnika
-                // od razu dopisz do nowej generacji
-                howCopy = (int)Math.Round(ki,0); //ile razy (wartosc calkowita z ki)
-                //Console.WriteLine("Bede kopiowac dokladnie: " + howCopy);
-                for(int j = 0; j < howCopy; j++)
+                foreach (Genotype specimen in ThisGeneration)
                 {
-                    //moze sie zdazyc sytuacja gdy tmpNextGeneration bedzie przepelniony
-                    try 
+                    qty = (int)(Math.Round(specimen.FunctionValue / sum, 0));
+                    for (int j = 0; j < qty; j++)
                     {
-                        tmpNextGeneration.Add(generation[i]);
-                    } catch (ArgumentOutOfRangeException) 
-                    {
-                        return tmpNextGeneration; //poniewaz wtedy bedzie cala tablica pelna
+                        tmpGenotypes.Add(specimen);
+                        if (tmpGenotypes.Count == LambdaPopulationSize)
+                            return tmpGenotypes;
                     }
                 }
-            } // koniec uzupelniania po przystosowaniu osobnikow
-            // jezeli lista nowej populacji tymczasowej nie jest pelna (do rozmiaru sigma)
-            // wtedy dopelnij liste osobnikami z najwieksza czescia ulamkowa
-            double maxkiu = 0.0;
-            int k = 0;
-            int index = 0;
-            var indexesChecked = new List<int>();
-            for (int i = 0; i < PopulationSize; i++)
-            {
-                //sprawdz czy tablica osobnikow tymczasowych jest juz zapelniona
-                if (tmpNextGeneration.Count() == LambdaPopulationSize)
-                    return tmpNextGeneration;
-                
-                //wez czesc ulamkowa pierwszego osobnika
-                //i przeszukaj cala populacje i znajdz osobnika z najwieksza czescia ulamkowa
-                maxkiu =  Frac(generation[i].RankIndividual() / hs);
-                for( ; k < PopulationSize; k++) 
+                if (tmpGenotypes.Count == LambdaPopulationSize)
                 {
-                    if(indexesChecked.Contains(k))
-                        continue;
-                    if(maxkiu < Frac(generation[k].RankIndividual() / hs)) 
+                    isLambdaEmpty = false;
+                    continue;
+                }
+                //czesci ulamkowe jezeli dojdzie do kontynuacji petli
+                foreach (Genotype specimen in ThisGeneration)
+                {
+                    qty = (int)(Math.Round(Frac(specimen.FunctionValue / sum), 0));
+                    for (int j = 0; j < qty; j++)
                     {
-                        maxkiu = Frac(generation[k].RankIndividual() / hs);
-                        index = generation.IndexOf(generation[k]);
+                        tmpGenotypes.Add(specimen);
+                        if (tmpGenotypes.Count == LambdaPopulationSize)
+                            return tmpGenotypes;
                     }
                 }
-                //dodaj najlepszego osobnika do tablicy
-                tmpNextGeneration.Add(generation[index]);
-                //oznacz osobnik jako odwiedzony aby zapobiec kopiowaniu tego samego osobnika wielokrotnie
-                indexesChecked.Add(index);
-                index = 0;//wyzeruj index
-
+                if (tmpGenotypes.Count == LambdaPopulationSize)
+                    isLambdaEmpty = false;
             }
 
-            Console.WriteLine(
-                "Proces deterministycznej selekcji osobników potomnych zakończony przed zapelnieniem calej listy."
-                );
-            return tmpNextGeneration;
+            return tmpGenotypes;
+        }
+
+        public List<Genotype> Succesion()
+        {
+            ThisGeneration.Clear();
+            var tmpGeneration = new List<Genotype>(PopulationSize);
+            tmpGeneration.AddRange(ResultGeneration.Take(PopulationSize));
+            tmpGeneration.Sort(new GenotypeComparer());
+            return tmpGeneration;
         }
 
         /// <summary>
@@ -213,5 +210,6 @@ namespace Rosenbrock
                 ThisGeneration.Add(new Genotype(GenotypeSize, this));
             }
         }
+
     }
 }
