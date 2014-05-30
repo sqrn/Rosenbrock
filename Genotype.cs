@@ -32,8 +32,7 @@ namespace Rosenbrock
             var genesArray = new double[Length];
             for(int i = 0; i < Length; i++)
             {
-                //var rnd = EvolutionStrategy.Random.NextDouble();
-                var rnd = EvolutionStrategy.Random.Next(-20,20);
+                var rnd = EvolutionStrategy.Random.NextDouble() * (100 - 0) + 0; //0,100
                 genesArray[i] = rnd;
             }
             return genesArray;
@@ -80,8 +79,7 @@ namespace Rosenbrock
         }
 
         /// <summary>
-        /// Metoda konwertuje bajty na reprezentacje rzeczywistoliczbowa i zwraca tablice
-        /// wartosci punktów funkcji.
+        /// Zwraca wartości genów w postaci tablicy liczb rzeczywistych. Ogólniej mówiać, zwraca punkt funkcji f.
         /// Zgodnie z ksiażką Zbigniewa Michalewicza, strona 45.
         /// </summary>
         /// <returns>Tablica wartości wymiarów funkcji</returns>

@@ -22,7 +22,6 @@ namespace Rosenbrock
 
         public FunctionToOptimize EvaluateFunction;
 
-
         public List<Genotype> ThisGeneration;
         public List<Genotype> NextGeneration;
         public List<Genotype> ResultGeneration;
@@ -57,16 +56,17 @@ namespace Rosenbrock
             ThisGeneration = new List<Genotype>(PopulationSize);//obecna generacja
             NextGeneration = new List<Genotype>(LambdaPopulationSize);//potomkowie
             ResultGeneration = new List<Genotype>(LambdaPopulationSize);//populacja wyjsciowa
+            BestGenotype = new List<double>(PopulationSize);
 
             CreateFirstGeneration(); //utworzenie pierwszej generacji osobnikow
             RatePopulation(ref ThisGeneration);
-            BestGenotype = new List<double>(PopulationSize);
+
             //ShowPopulation(ThisGeneration);
-            for (int i = 0; i <= NumberOfGenerations; i++)
+            for (int i = 0; i < NumberOfGenerations; i++)
             {
-                Console.Write("{0} ", i);
-                Program.results.WriteLine("{0}", ThisGeneration.Last().FunctionValue.ToString("0.000000000"));
-                BestGenotype.Add(ThisGeneration.Last().FunctionValue);
+                //Console.Write("{0} ", i);
+                Program.results.WriteLine("{0}", ThisGeneration.First().FunctionValue.ToString("0.000000000"));
+                BestGenotype.Add(ThisGeneration.First().FunctionValue);
                 NextGeneration = Selection();
                 Crossover();
                 Mutate();
